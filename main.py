@@ -21,7 +21,7 @@ patches = [
         "EB 40 41 C6 04 24 00 C6"
     ]
 ]
-pattern = [0x74, None, 0x41, 0xC6, 0x04, 0x24, 0x00, 0xC6]
+pattern = [0x74, None, 0x41, 0xC6, 0x04, 0x24, 0x00, None] # 0xC6
 
 is_orig_uef = True
 filename = "hoi4"
@@ -183,10 +183,17 @@ else:
                 matched_pattern,
                 add_to[0] + matched_pattern[add_to[1]:]
             ])
+
+    d, fpatchlen = {}, len(patches)
+    for p in patches:
+        k = p[1][-2:]
+        d[k] = d.get(k, 0) + 1
+    patches = [p for p in patches if d[p[1][-2:]] > 1]
+    print(f"Filtered patches from len {fpatchlen} to {len(patches)}")
   
     if len(patches) != len(orig_patches):
         print(
-            f"The pattern {0} amount does not equal to {1}. Quitting.".format(
+            "The pattern {0} amount does not equal to {1}. Quitting.".format(
                 len(patches), len(orig_patches))
         )
         raise SystemExit
