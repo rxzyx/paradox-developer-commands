@@ -6,7 +6,7 @@ print("Paradox Developer Access and Patcher Script by rxzyx on Github.",
       "Make sure the original file is backed up\n",
       "Supports:\nhoi4\neu4", sep='\n')
 
-def is_sudo():    # needed for .app files
+def is_sudo():
     return os.geteuid() == 0
 
 patches = [
@@ -21,11 +21,21 @@ patches = [
         "EB 40 41 C6 04 24 00 C6"
     ]
 ]
-pattern = [0x74, None, 0x41, 0xC6, 0x04, 0x24, 0x00, None] # 0xC6
+pattern = [
+    [
+        [0x74, None, 0x41, 0xC6, None, None, None, 0xC6,
+         None, None, None, 0x00, 0x00],
+        "EB"
+    ],
+    [
+        [0x0F, None, 0xFF, 0x00, 0x00, 0x00, 0x41, 0xC6],
+        "E9 00 01"
+    ]
+]
 
 is_orig_uef = True
 filename = "hoi4"
-add_to = ["EB", 2]
+add_to = "EB"
 
 file_path = sys.argv[1] if len(sys.argv) > 1 else input(
     "Enter the file path: ").strip()
@@ -55,12 +65,16 @@ elif file_path.endswith(".exe"):    # not confirmed!
             "39 C0 90 90 90 0F 85 A8 FE FF FF",
             # if the above replacement crashes the game / does not work,
             # try 41 80 7E 10 01 0F 85 A8 FE FF FF instead
+            # I don't have a Windows device so I can't test this...
+            # let me know if there is an issue with it!
         ]
 
     ]
-    # pattern = [0x74, None, 0x41, 0xB8, 0x26, 0x00, 0x00, 0x00, 0x48, 0x8D]
-    pattern = [0x74, None, 0x41, 0xB8, 0x26, 0x00, 0x00, 0x00, 0x48, 0x8D,
-               0x15, 0x64, 0x25]
+    pattern = [
+        [[0x74, None, 0x41, 0xB8, 0x26, 0x00, 0x00, 0x00, 0x48, 0x8D,
+               0x15, 0x64, 0x25], "EB"]]
+if not isinstance(pattern[0], list):
+    pattern = [[pattern, add_to]]
 orig_patches = patches
 headers = {
     "Mach-O (64-bit)": [
@@ -76,12 +90,12 @@ headers = {
     ]
 }
 
-
 with open(file_path, 'rb') as f:
     data = f.read()
     if data.count(bytes("Europa Universalis IV", "utf8")):
-        pattern = [0x0F, 0x84, None, 0xFF, 0xFF, 0xFF,
-                   0xC6, 0x85, 0x60, 0xFF, 0xFF, 0xFF]
+        pattern = [
+            [[0x0F, 0x84, None, 0xFF, 0xFF, 0xFF,
+                   0xC6, 0x85, 0x60, 0xFF, 0xFF, 0xFF], "E9 39 FF FF FF 90"]]
         patches = [
             [
                 "Remove Dev Check #1",                  # title
@@ -118,10 +132,9 @@ with open(file_path, 'rb') as f:
             patches = patches[1:]
         filename = "eu4"
 
-        add_to = ["E9 39 FF FF FF 90", 17]
+        add_to = "E9 39 FF FF FF 90"
     elif data.count(bytes("Hearts of Iron IV", "utf8")):
         print("HOI4 file confirmed.")
-
     elf_header = f.read(64)
     for hn, heads in headers.items():
         for h in heads:
@@ -139,8 +152,9 @@ with open(file_path, 'rb') as f:
                             "E9 3D 10 00 00 C6 03 00"
                         ]
                     ]
-                    pattern = [0x0F, 0x84, None, 0x10,
-                               0x00, 0x00, 0xC6, 0x03, 0x00]
+                    pattern = [
+                        [[0x0F, 0x84, None, 0x10,
+                        0x00, 0x00, 0xC6, 0x03, 0x00], "E9 00 01"]]
 
 n = a = 0
 for patch in patches:
@@ -167,30 +181,28 @@ else:
     print(f"The pattern amount ({n}) is not equal. Hard searching instead...")
     patches = []
 
-    for i in range(len(data) - len(pattern) + 1):
-        match_found = True
-        for j in range(len(pattern)):
-            if (pattern[j] is not None and data[i + j] != pattern[j]):
-                match_found = False
-                break
-        if match_found:
-            title = f"Remove Dev Check #{len(patches) + 1}"
-            print("Found", title)
-            matched_pattern = ' '.join(
-                f"{data[i + j]:02X}" for j in range(len(pattern)))
-            patches.append([
-                title,
-                matched_pattern,
-                add_to[0] + matched_pattern[add_to[1]:]
-            ])
-
-    d, fpatchlen = {}, len(patches)
-    for p in patches:
-        k = p[1][-2:]
-        d[k] = d.get(k, 0) + 1
-    patches = [p for p in patches if d[p[1][-2:]] > 1]
-    print(f"Filtered patches from len {fpatchlen} to {len(patches)}")
-  
+    for n, p in enumerate(pattern):
+        add_to = p[1]
+        p = p[0]
+        print(f"Testing Pattern Search #{n+1}")
+        for i in range(len(data) - len(p) + 1):
+            match_found = True
+            for j in range(len(p)):
+                if (p[j] is not None and data[i + j] != p[j]):
+                    match_found = False
+                    break
+            if match_found:
+                title = f"Remove Dev Check #{len(patches) + 1}"
+                print("Found", title)
+                matched_pattern = ' '.join(
+                    f"{data[i + j]:02X}" for j in range(len(p)))
+                print(matched_pattern)
+                print(add_to + matched_pattern[len(add_to):])
+                patches.append([
+                    title,
+                    matched_pattern,
+                    add_to + matched_pattern[len(add_to):]
+                ])
     if len(patches) != len(orig_patches):
         print(
             "The pattern {0} amount does not equal to {1}. Quitting.".format(
@@ -210,12 +222,11 @@ if patch_mode == 'y':
     with open(file_path, 'wb') as f:
         f.write(data)
     print(
-        "All patches complete. The file is now patched."
+        "All patches complete. The file is now patched for developer access."
     )
-    if is_orig_uef and not file_path.endswith(".exe"):
+    if is_orig_uef:
         print("Now just right-click on the application, click " + \
               "'Show Package Contents', navigate to Contents/MacOS " + \
               f"and replace the '{filename}' file with the patched one.")
     else:
         print("Now replace the application with the patched one.")
-        
