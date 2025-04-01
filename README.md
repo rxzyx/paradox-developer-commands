@@ -9,7 +9,7 @@
 ### HOI4
 - Add developer access to commands in the console
     - This means that you can use commands like `normals`, `aircombat` and more!
-    - You can see which commands can be now be used by checking the documentation/script_documentation.json file and looking at the console_commands section, where the commands that are now unlocked will have the value "available_in_release_build" set to false, you can also see unlocked commands in documentation/console_commands_documentation.html where the unlocked commands will have "Not available in release build" in them.
+    - You can see which commands can now be used by checking the documentation/script_documentation.json file and looking at the console_commands section, where the commands that are now unlocked will have the value "available_in_release_build" set to false, you can also see unlocked commands in documentation/console_commands_documentation.html where the unlocked commands will have "Not available in release build" in them.
 
 ### EU4
 - Add developer access to commands in the console
